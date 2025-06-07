@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-
+import { FaUser, FaLock, FaEnvelope, FaPhone } from "react-icons/fa"; // Importa os ícones do FontAwesome
 import {
   View,
   Text,
@@ -93,7 +93,7 @@ export default function Create({ navigation }) {
         value={nome}
         onChangeText={setNome}
         style={styles.input}
-      />
+      />  
       <TextInput
         placeholder="E-mail"
         value={email}
@@ -127,9 +127,13 @@ export default function Create({ navigation }) {
       <View style={styles.LoginDiv}>
         <TouchableOpacity
           style={styles.Login}
-          onPress={() => navigation.navigate("Inicio")}
-        >
-          <Text style={styles.LoginText}>Faça Login em vez disso</Text>
+          onPress={() => navigation.navigate("Inicio")} >
+        
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.Login}
+          onPress={() => navigation.navigate("Login")} >
+          <Text style={styles.LoginText}>Faça login em vez disso</Text>
         </TouchableOpacity>
       </View>
     </View>
