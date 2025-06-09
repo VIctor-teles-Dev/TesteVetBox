@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { FaUser, FaLock, FaEnvelope, FaPhone } from "react-icons/fa"; // Importa os ícones do FontAwesome
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -11,6 +10,8 @@ import {
 } from "react-native";
 import { validateForm } from "../../utils/validation"; // Importa a função de validação
 import UserServices from "../../Services/UserServices"; // Importa o serviço de usuário
+
+
 
 const userServices = new UserServices(); // Instancia o serviço de usuário
 
@@ -27,7 +28,14 @@ export default function Create({ navigation }) {
     // Verifica se todos os campos estão preenchidos
     if (!nome || !email || !telefone || !senha) {
       Alert.alert("Preencha todos os campos!");
-      return;
+      return() => {
+        api.post("/create", {
+          nome: nome,
+          email: email,
+          telefone: telefone,
+          senha: senha,
+        });
+      }
     }
     // Validação dos campos
     if (!validarCampos(nome, email, telefone, senha)) {
@@ -41,11 +49,12 @@ export default function Create({ navigation }) {
     try {
       setLoading(true);
       const response = await userServices.createUser({
-        name: nome,
+        nome: nome,
         email: email,
-        phone: telefone,
-        password: senha,
-      });   if (response === true) {
+        telefone: telefone,
+        senha: senha,
+      });
+      if (response === true) {
         Alert.alert("Sucesso", "Perfil criado com sucesso!");
       }
       console.log("Resposta do servidor:", response);
@@ -53,7 +62,8 @@ export default function Create({ navigation }) {
     } catch (error) {
       setLoading(false);
       // Mostra mensagem de erro detalhada se disponível
-      let msg = "Ocorreu um erro ao criar o perfil. Tente novamente mais tarde.";
+      let msg =
+        "Ocorreu um erro ao criar o perfil. Tente novamente mais tarde.";
       if (
         error.response &&
         error.response.data &&
@@ -85,7 +95,7 @@ export default function Create({ navigation }) {
       <Image
         source={require("../../assets/LogoVet.jpeg")}
         style={styles.logo}
-        resizeMode="contain" 
+        resizeMode="contain"
       />
       <Text style={styles.title}>🌿 crie seu perfil 🌿</Text>
       <TextInput
@@ -93,7 +103,7 @@ export default function Create({ navigation }) {
         value={nome}
         onChangeText={setNome}
         style={styles.input}
-      />  
+      />
       <TextInput
         placeholder="E-mail"
         value={email}
@@ -127,12 +137,12 @@ export default function Create({ navigation }) {
       <View style={styles.LoginDiv}>
         <TouchableOpacity
           style={styles.Login}
-          onPress={() => navigation.navigate("Inicio")} >
-        
-        </TouchableOpacity>
+          onPress={() => navigation.navigate("Inicio")}
+        ></TouchableOpacity>
         <TouchableOpacity
           style={styles.Login}
-          onPress={() => navigation.navigate("Login")} >
+          onPress={() => navigation.navigate("Login")}
+        >
           <Text style={styles.LoginText}>Faça login em vez disso</Text>
         </TouchableOpacity>
       </View>

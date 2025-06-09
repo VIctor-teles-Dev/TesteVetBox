@@ -1,25 +1,24 @@
 import axios from "axios";
-import { VETBOX_APP_API_LOGIN } from "../.env";
 
 export default class UserServices {
   constructor() {
-    console.log("VETBOX_APP_API_LOGIN:", VETBOX_APP_API_LOGIN);
     this.axio = axios.create({
-      baseURL: VETBOX_APP_API_LOGIN,
+      baseURL: "http://192.168.100.53:3000", // Corrija para http://
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
   }
   async createUser(userData) {
     try {
-      console.log("URL base:", this.axio.defaults.baseURL);
-      console.log("Dados enviados:", userData);
-      // Altere o endpoint para o correto de cadastro
-      const { data } = await this.axio.post("/users", userData); // Exemplo: "/users"
-      if (data && data.user) {
+      // Envia para o endpoint correto
+      const { data } = await this.axio.post("/create", userData);
+      // Se quiser tratar o retorno, adapte aqui
+      if (data && data.message === "Usuário criado com sucesso!") {
         return true;
       }
       return false;
     } catch (error) {
-      // Log detalhado do erro
       console.log("Erro ao criar usuário:", error);
       if (error.response) {
         console.log("Erro response data:", error.response.data);

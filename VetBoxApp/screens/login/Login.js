@@ -1,16 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import UserImage from '../../assets/User.png'; // Certifique-se de que o caminho está correto
+import axios from 'axios';
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
-    console.log(`Login attempt with email: ${email}`);
-  };
+const handleLogin = async () => {
+  try {
+    const response = await axios.post("http://192.168.100.53:3000/rlogin", {
+      email,
+      senha: password, // Use o mesmo nome do backend!
+    });
+    if (response.data && response.data.message === "Login bem-sucedido!") {
+      // Login OK, navegue para a tela desejada
+      navigation.navigate('Home');
+    } else {
+      alert("Falha no login!");
+    }
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.message) {
+      alert(error.response.data.message);
+    } else {
+      alert("Erro ao conectar ao servidor.");
+    }
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -54,7 +72,7 @@ export default function Login({ navigation }) {
           <Text style={styles.forgot}>Esqueceu a senha?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate(handleLogin)}>
           <Text style={styles.loginButtonText}>Entrar</Text>
         </TouchableOpacity>
 
