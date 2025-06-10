@@ -29,7 +29,7 @@ export default function Inicio({ navigation }) {
 
         <TouchableOpacity
           style={styles.filledButton}
-          onPress={() => navigation.navigate('')} //home screen
+          onPress={() => navigation.navigate('Login')} //home screen
         >
           <Text style={styles.filledButtonText}>Entrar</Text>
         </TouchableOpacity>

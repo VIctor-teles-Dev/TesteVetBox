@@ -3,7 +3,7 @@ import axios from "axios";
 export default class UserServices {
   constructor() {
     this.axio = axios.create({
-      baseURL: "http://192.168.100.53:3000", // Corrija para http://
+      baseURL: "http://192.168.100.53:3000", 
       headers: {
         "Content-Type": "application/json",
       },
