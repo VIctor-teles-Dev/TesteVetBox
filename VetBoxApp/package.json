@@ -10,25 +10,36 @@
   },
   "dependencies": {
     "@react-icons/all-files": "^4.1.0",
+    "@react-native-async-storage/async-storage": "^2.1.2",
+    "@react-navigation/bottom-tabs": "^7.3.14",
     "@react-navigation/native": "^7.1.10",
     "@react-navigation/native-stack": "^7.3.14",
     "axios": "^1.9.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "expo": "^53.0.11",
+    "expo-image-picker": "~16.1.4",
     "expo-status-bar": "~2.2.3",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "react-native": "0.79.3",
     "react-native-safe-area-context": "^5.4.0",
-    "react-native-screens": "^4.11.1",
-    "react-native-web": "^0.20.0"
+    "react-native-screens": "~4.11.1",
+    "react-native-vector-icons": "^10.2.0",
+    "react-native-web": "^0.20.0",
+    "tsconfig.json": "^1.0.11",
+    "typescript": "^5.8.3",
+    "expo-linear-gradient": "~14.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/express": "^5.0.3",
+    "@types/react": "~19.0.10",
+    "@types/react-native": "^0.72.8",
+    "@types/react-native-vector-icons": "^6.4.18",
     "nodemon": "^3.1.10"
   },
   "private": true
