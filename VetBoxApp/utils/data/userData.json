@@ -1,3 +1,11 @@
 [
-  
+  {
+    "id": 934648,
+    "nome": "Teste",
+    "email": "teste@gmail.com",
+    "telefone": "0000000000",
+    "senha": "$2b$10$aqZIq886hr94z3WwzRUv6u4MoaZyxdIsiMdeiGn267ZTGlpvmDHoq",
+    "dados": {},
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6OTM0NjQ4LCJpYXQiOjE3NDk1ODcxOTV9.ZgizX_Bao6ThoKdEWrafW_4vtmJiOSZjBllTL6YnKE8"
+  }
 ]
