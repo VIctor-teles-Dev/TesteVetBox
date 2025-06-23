@@ -11,9 +11,18 @@ import {
 import { validateForm } from "../../utils/validation"; // Importa a função de validação
 import UserServices from "../../Services/UserServices"; // Importa o serviço de usuário
 
-
-
 const userServices = new UserServices(); // Instancia o serviço de usuário
+
+// Função para formatar telefone no padrão (**)\*********
+function formatTelefone(value) {
+  // Remove tudo que não for dígito
+  const digits = value.replace(/\D/g, "");
+  // Aplica o padrão (**)*********
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 11)
+    return `(${digits.slice(0, 2)})${digits.slice(2, 11)}`;
+  return `(${digits.slice(0, 2)})${digits.slice(2, 11)}`;
+}
 
 export default function Create({ navigation }) {
   const [nome, setNome] = useState("");
@@ -114,9 +123,10 @@ export default function Create({ navigation }) {
       <TextInput
         placeholder="Telefone"
         value={telefone}
-        onChangeText={setTelefone}
+        onChangeText={(text) => setTelefone(formatTelefone(text))}
         style={styles.input}
         keyboardType="phone-pad"
+        maxLength={13} // (**)********* = 13 caracteres
       />
       <TextInput
         placeholder="Senha"

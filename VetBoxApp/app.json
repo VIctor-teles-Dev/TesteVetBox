@@ -3,6 +3,11 @@
     "name": "VetBoxApp",
     "slug": "VetBoxApp",
     "version": "1.0.0",
+    "icons": {
+      "android": "./assets/LogoVet.jpeg",
+      "ios": "./assets/LogoVet.jpeg",
+      "web": "./assets/LogoVet.jpeg"
+    },
     "plugins": [
       [
         "expo-image-picker",

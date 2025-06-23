@@ -3,7 +3,7 @@ const emailValidation = (email) => {
 };
 
 const telefoneValidation = (telefone) => {
-  return telefone?.toString().length >= 10 && telefone?.toString().length <= 11;
+  return telefone?.toString().length >= 12 && telefone?.toString().length <= 13;
 };
 
 const senhaValidation = (senha) => {

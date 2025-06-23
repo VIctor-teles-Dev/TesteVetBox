@@ -14,58 +14,154 @@ import {
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 
-export default function FeedScreen() {
+export default function FeedScreen({ route }) { // 1. Aceite a prop 'route'
   const [posts, setPosts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [likes, setLikes] = useState<{ [key: number]: number }>({});
-  const [liked, setLiked] = useState<{ [key: number]: boolean }>({});
-  const [comments, setComments] = useState<{ [key: number]: string[] }>({});
+
+  // 2. Obtenha o ID do usuário logado dos parâmetros da rota
+  const actualUserId = route?.params?.userId;
+
+  // 3. Estado para armazenar os detalhes do perfil do usuário logado
+  const [loggedInUserProfile, setLoggedInUserProfile] = useState({
+    id: null,
+    nome: "Usuário", // Nome padrão enquanto carrega
+    fotoPerfil: null,
+  });
+
+  // 4. Busque os detalhes do perfil do usuário logado quando actualUserId mudar
+  useEffect(() => {
+    if (actualUserId) {
+      axios.get(`http://192.168.100.53:3000/profile?userId=${actualUserId}`)
+        .then(res => {
+          setLoggedInUserProfile(res.data);
+        })
+        .catch(err => console.error("Erro ao buscar perfil do usuário logado:", err));
+    }
+  }, [actualUserId]);
+
   const [commentInputs, setCommentInputs] = useState<{ [key: number]: string }>({});
 
-  const fetchPosts = async () => {
+  // Added options parameter with isInitialLoad and silentError
+  const fetchPosts = async (options: { isInitialLoad?: boolean, silentError?: boolean } = {}): Promise<boolean> => {
+    const { isInitialLoad = false, silentError = false } = options;
     try {
       const res = await axios.get("http://192.168.100.53:3000/posts");
-      setPosts(res.data);
-      // Inicializa likes e comentários para cada post
-      const initialLikes: { [key: number]: number } = {};
-      const initialLiked: { [key: number]: boolean } = {};
-      const initialComments: { [key: number]: string[] } = {};
+      // Mapeia os posts para incluir a informação se o usuário logado curtiu
+      const processedPosts = res.data.map(post => ({
+        ...post,
+        likedByMe: post.likedBy ? post.likedBy.includes(actualUserId) : false, // Use actualUserId
+        likesCount: post.likesCount || 0,
+        commentsList: post.commentsList || [],
+      }));
+      setPosts(processedPosts);
+
       const initialInputs: { [key: number]: string } = {};
-      res.data.forEach((post: any) => {
-        initialLikes[post.id] = 0;
-        initialLiked[post.id] = false;
-        initialComments[post.id] = [];
+      processedPosts.forEach((post: any) => {
         initialInputs[post.id] = "";
       });
-      setLikes(initialLikes);
-      setLiked(initialLiked);
-      setComments(initialComments);
       setCommentInputs(initialInputs);
-    } catch {
-      setPosts([]);
+      return true;
+    } catch (error) {
+      if (!silentError) {
+        console.error("Erro ao buscar posts. Detalhes do erro:");
+        if (axios.isAxiosError(error)) {
+          console.error("Mensagem:", error.message);
+          console.error("Código:", error.code);
+          console.error("Config:", JSON.stringify(error.config, null, 2));
+          if (error.request) console.error("Request:", JSON.stringify(error.request, null, 2));
+          if (error.response) console.error("Response:", JSON.stringify(error.response.data, null, 2));
+          console.error("Stack:", error.stack);
+        } else {
+          console.error("Erro não Axios:", error);
+        }
+      } else {
+        console.warn("Fetch posts failed silently after an action. Detalhes:", error.message, error.code);
+      }
+      if (isInitialLoad) { // Only clear posts if it was an initial load attempt and it failed
+        setPosts([]);
+      }
+      return false;
     }
   };
 
+  // Helper function to process a single post from the server
+  const processSinglePost = (postFromServer, currentUserId) => {
+    if (!postFromServer) return null;
+    return {
+      ...postFromServer,
+      likedByMe: postFromServer.likedBy ? postFromServer.likedBy.includes(currentUserId) : false,
+      likesCount: postFromServer.likesCount || 0,
+      commentsList: postFromServer.commentsList || [],
+    };
+  };
   useFocusEffect(
     useCallback(() => {
-      fetchPosts();
-    }, [])
+      fetchPosts({ isInitialLoad: true, silentError: false });
+    }, [actualUserId]) // Dependa de actualUserId
   );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchPosts().finally(() => setRefreshing(false));
-  }, []);
+    fetchPosts({ silentError: false }) // Not silent on manual refresh
+      .finally(() => setRefreshing(false));
+  }, [actualUserId]); // Dependa de actualUserId
 
-  const handleLike = (postId: number) => {
-    setLiked((prev) => ({
-      ...prev,
-      [postId]: !prev[postId],
-    }));
-    setLikes((prev) => ({
-      ...prev,
-      [postId]: prev[postId] + (liked[postId] ? -1 : 1),
-    }));
+  const handleLike = async (postId: number) => {
+    if (!actualUserId) { // Verifique se o usuário está logado
+      console.warn("Tentativa de curtir sem estar logado.");
+      // alert("Você precisa estar logado para curtir."); // Removido
+      return;
+    }
+
+    // Store original state for potential rollback
+    const originalPosts = posts;
+    const postIndex = originalPosts.findIndex(p => p.id === postId);
+    if (postIndex === -1) return;
+
+    // Optimistic update
+    setPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          const likedByMe = !post.likedByMe;
+          const likesCount = likedByMe ? (post.likesCount || 0) + 1 : (post.likesCount || 0) - 1;
+          return { ...post, likedByMe, likesCount: Math.max(0, likesCount) };
+        }
+        return post;
+      })
+    );
+
+    try {
+      // Atualiza o estado localmente para feedback imediato
+      const response = await axios.post(`http://192.168.100.53:3000/posts/${postId}/like`, {
+        userId: actualUserId, // Use actualUserId
+      });
+      // Action successful. Update the specific post with server data.
+      const serverPostResponse = response.data.post;
+      const processedServerPost = processSinglePost(serverPostResponse, actualUserId);
+      if (processedServerPost) {
+        setPosts(prevPosts =>
+          prevPosts.map(p => (p.id === postId ? processedServerPost : p))
+        );
+      }
+    } catch (error) {
+      console.error(`Erro ao curtir o post ${postId}. Detalhes do erro:`);
+      if (axios.isAxiosError(error)) {
+        console.error("Mensagem:", error.message);
+        console.error("Código:", error.code);
+        console.error("Config:", JSON.stringify(error.config, null, 2));
+        if (error.request) console.error("Request:", JSON.stringify(error.request, null, 2));
+        if (error.response) console.error("Response:", JSON.stringify(error.response.data, null, 2));
+        console.error("Stack:", error.stack);
+      } else {
+        console.error("Erro não Axios ao curtir:", error);
+      }
+      // Reverter a atualização local em caso de erro
+      setPosts(originalPosts);
+      // alert("Erro ao curtir o post. Tente novamente."); // Removido
+      // Attempt a non-silent fetch to resync after error
+      fetchPosts({ silentError: false })
+        .catch(e => console.error("Secondary fetch after like error also failed.", e));
+    }
   };
 
   const handleCommentInput = (postId: number, text: string) => {
@@ -75,17 +171,70 @@ export default function FeedScreen() {
     }));
   };
 
-  const handleAddComment = (postId: number) => {
+  const handleAddComment = async (postId: number) => {
+    if (!actualUserId || !loggedInUserProfile?.id) { // Verifique se o usuário está logado e o perfil foi carregado
+      console.warn("Tentativa de comentar sem estar logado ou perfil não carregado.");
+      // alert("Você precisa estar logado para comentar."); // Removido
+      return;
+    }
     const text = commentInputs[postId]?.trim();
     if (!text) return;
-    setComments((prev) => ({
-      ...prev,
-      [postId]: [...(prev[postId] || []), text],
-    }));
-    setCommentInputs((prev) => ({
-      ...prev,
-      [postId]: "",
-    }));
+
+    const originalPosts = posts; // For rollback
+    const originalCommentInputText = commentInputs[postId]; // Save for potential rollback
+
+    const newComment = {
+      userId: actualUserId,
+      nome: loggedInUserProfile.nome, // Use o nome do perfil carregado
+      fotoPerfil: loggedInUserProfile.fotoPerfil, // Use a foto do perfil para atualização otimista
+      texto: text,
+      data: new Date().toISOString(),
+    };
+
+    try {
+      // Atualiza o estado localmente
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return { ...post, commentsList: [newComment, ...(post.commentsList || [])] };
+          }
+          return post;
+        })
+      );
+      setCommentInputs(prev => ({ ...prev, [postId]: "" })); // Clear input optimistically
+
+      const response = await axios.post(`http://192.168.100.53:3000/posts/${postId}/comment`, {
+        userId: actualUserId, // Use actualUserId
+        // O backend irá buscar nome e foto pelo userId, não precisa enviar nomeUsuario
+        textoComentario: text,
+      });
+      // Action successful. Update the specific post with server data.
+      const serverPostResponse = response.data.post;
+      const processedServerPost = processSinglePost(serverPostResponse, actualUserId);
+      if (processedServerPost) {
+        setPosts(prevPosts =>
+          prevPosts.map(p => (p.id === postId ? processedServerPost : p))
+        );
+      }
+    } catch (error) {
+      console.error(`Erro ao adicionar comentário ao post ${postId}. Detalhes do erro:`);
+      if (axios.isAxiosError(error)) {
+        console.error("Mensagem:", error.message);
+        console.error("Código:", error.code);
+        console.error("Config:", JSON.stringify(error.config, null, 2));
+        if (error.request) console.error("Request:", JSON.stringify(error.request, null, 2));
+        if (error.response) console.error("Response:", JSON.stringify(error.response.data, null, 2));
+        console.error("Stack:", error.stack);
+      } else {
+        console.error("Erro não Axios ao comentar:", error);
+      }
+      // Rollback: Restore original posts and the comment input text
+      setPosts(originalPosts);
+      setCommentInputs(prev => ({ ...prev, [postId]: originalCommentInputText }));
+      // alert("Erro ao adicionar comentário. Tente novamente."); // Removido
+      fetchPosts({ silentError: false })
+        .catch(e => console.error("Secondary fetch after comment error also failed.", e));
+    }
   };
 
   const renderItem = ({ item }) => (
@@ -113,26 +262,37 @@ export default function FeedScreen() {
           style={styles.actionButton}
           onPress={() => handleLike(item.id)}
         >
-          <Text style={[styles.actionText, liked[item.id] && styles.liked]}>
-            {liked[item.id] ? "♥" : "♡"} {likes[item.id] || 0}
+          <Text style={[styles.actionText, item.likedByMe && styles.liked]}>
+            {item.likedByMe ? "♥" : "♡"} {item.likesCount || 0}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => {
-            // Foca no campo de comentário (opcional)
+            // Você pode adicionar lógica para focar no TextInput aqui se desejar
           }}
         >
-          <Text style={styles.actionText}>💬 {comments[item.id]?.length || 0}</Text>
+          <Text style={styles.actionText}>💬 {item.commentsList?.length || 0}</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.commentSection}>
         <FlatList
-          data={comments[item.id]}
-          keyExtractor={(_, idx) => idx.toString()}
-          renderItem={({ item: comment }) => (
-            <View style={styles.commentBubble}>
-              <Text style={styles.commentText}>{comment}</Text>
+          data={item.commentsList}
+          keyExtractor={(comment, idx) => comment.data + idx.toString()} // Usar algo mais único se possível
+          renderItem={({ item: comment}) => (
+            <View style={styles.commentContainer}>
+              <Image
+                source={
+                  comment.fotoPerfil
+                    ? { uri: `data:image/jpeg;base64,${comment.fotoPerfil}` }
+                    : require("../assets/User.png") // Imagem padrão
+                }
+                style={styles.commentProfilePic}
+              />
+              <View style={styles.commentBubble}>
+                <Text style={styles.commentUsername}>{comment.nome || "Usuário"}</Text>
+                <Text style={styles.commentText}>{comment.texto}</Text>
+              </View>
             </View>
           )}
           ListEmptyComponent={null}
@@ -223,6 +383,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#54B15422",
   },
+  commentContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  commentProfilePic: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+    marginTop: 2,
+  },
   profilePic: {
     width: 38,
     height: 38,
@@ -294,6 +467,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderWidth: 1,
     borderColor: "#54B15422",
+  },
+  commentUsername: {
+    fontWeight: "bold",
+    fontSize: 13,
+    color: "#54B154",
+    marginBottom: 2,
   },
   commentText: {
     color: "#222",
